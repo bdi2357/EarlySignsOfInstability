@@ -8,29 +8,29 @@ This project asks a simple question:
 
 ## Core idea
 
-Let \(\theta\) denote the control parameter.
+Let $\theta$ denote the control parameter.
 
-At each value of \(\theta\), we observe the system state \(X_\theta\), estimate its mean \(\mu_\theta\) and covariance \(\Sigma_\theta\), and approximate the local state distribution by the Gaussian with the same first two moments,
+At each value of $\theta$, we observe the system state $X_\theta$, estimate its mean $\mu_\theta$ and covariance $\Sigma_\theta$, and approximate the local state distribution by the Gaussian with the same first two moments,
 
-\[
-X_\theta \approx \mathcal N(\mu_\theta,\Sigma_\theta).
-\]
+$$
+X_\theta \approx \mathcal{N}(\mu_\theta,\Sigma_\theta).
+$$
 
-We then measure how rapidly this Gaussian surrogate changes as \(\theta\) changes. The covariance contribution to the KL/Fisher curvature is
+We then measure how rapidly this Gaussian surrogate changes as $\theta$ changes. The covariance contribution to the KL/Fisher curvature is
 
-\[
+$$
 \kappa(\theta)
 =
-\frac12
+\frac{1}{2}
 \operatorname{tr}
 \left[
 \left(
 \Sigma_\theta^{-1}\Sigma_\theta'
 \right)^2
 \right].
-\]
+$$
 
-A large value means that a small change in the control parameter produces a large change in the local covariance structure.
+A large value of $\kappa(\theta)$ means that a small change in the control parameter produces a large change in the local covariance structure.
 
 This is different from:
 
@@ -44,27 +44,25 @@ The method uses **parameter sensitivity of the local probability law** as the wa
 
 For a noisy dominant mode approaching loss of stability, linear theory predicts
 
-\[
-\kappa(\theta)
-\propto
-(\theta_c-\theta)^{-2}.
-\]
+$$
+\kappa(\theta)\propto(\theta_c-\theta)^{-2}.
+$$
 
 This growth does **not** continue indefinitely. When nonlinear effects become important, finite noise cuts off the linear divergence and the sensitivity rolls over.
 
 For the cubic critical-mode model, the exact stationary distribution remains uniformly close to its variance-matched Gaussian throughout the nonlinear crossover:
 
-\[
+$$
 \sup_\theta
 D_{\mathrm{KL}}
 \left(
 P_\theta
 \Vert
-\mathcal N(0,\operatorname{Var}P_\theta)
+\mathcal{N}\!\left(0,\operatorname{Var}P_\theta\right)
 \right)
 \le 0.031692
 \quad\text{nats}.
-\]
+$$
 
 Thus the Gaussian approximation can remain useful even when the linear variance law has already failed.
 
@@ -94,41 +92,41 @@ Experimental acoustic data show increasing covariance sensitivity as the combust
 
 Experimental wind-tunnel data give the clearest causal example.
 
-Using only measurements available through \(26\,\mathrm{m/s}\),
+Using only measurements available through $26\,\mathrm{m/s}$,
 
-\[
-K_{24\to26} > K_{20\to24}
-\]
+$$
+K_{24\to26} > K_{20\to24},
+$$
 
-with block-bootstrap support, while the large-amplitude response appears later at \(28\,\mathrm{m/s}\).
+with block-bootstrap support, while the large-amplitude response appears later at $28\,\mathrm{m/s}$.
 
 The increase is not explained by total variance alone:
 
-\[
+$$
 \text{full covariance sensitivity ratio}\approx 2.10,
-\]
+$$
 
-\[
+$$
 \text{total-variance sensitivity ratio}\approx 1.28.
-\]
+$$
 
 Their ratio is about
 
-\[
+$$
 1.64,
-\]
+$$
 
 indicating an additional contribution from changing multichannel covariance geometry: anisotropy, correlations, and modal orientation.
 
-The standardized non-Gaussianity of the wing signal changes little between \(24\) and \(26\,\mathrm{m/s}\), then increases sharply at \(28\,\mathrm{m/s}\). This supports the sequence
+The standardized non-Gaussianity of the wing signal changes little between $24$ and $26\,\mathrm{m/s}$, then increases sharply at $28\,\mathrm{m/s}$. This supports the sequence
 
-\[
+$$
 \text{approximately stable Gaussian shape}
 \rightarrow
 \text{increased covariance sensitivity}
 \rightarrow
 \text{large nonlinear response}.
-\]
+$$
 
 ## What the project claims
 
