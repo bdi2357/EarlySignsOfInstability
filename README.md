@@ -1,160 +1,173 @@
 # Early Signs of Instability
 
-Many dynamical systems change abruptly as a control parameter is varied: the Rayleigh parameter in Lorenz flow, forcing strength in Duffing dynamics, fuel–air ratio in a combustor, or airspeed for a flexible wing.
+Many systems look normal shortly before they become unstable.
 
-This project asks a simple question:
+Examples include an aircraft wing approaching flutter, a combustor approaching violent oscillations, a power grid developing an unstable mode, or an ecosystem approaching a tipping point.
 
-> **Can an approaching transition be detected from short records, before large oscillations appear or Lyapunov-based methods have enough data?**
+Most early-warning methods watch one quantity at a time, such as variance, RMS, or lag-1 autocorrelation.
 
-## Core idea
+This project asks a broader question:
 
-Let $\theta$ denote the control parameter.
+> **Can instability first appear in the relationships between several measurements, before any single measurement looks dangerous?**
 
-At each value of $\theta$, we observe the system state $X_\theta$, estimate its mean $\mu_\theta$ and covariance $\Sigma_\theta$, and approximate the local state distribution by the Gaussian with the same first two moments:
+## Main idea
+
+Suppose a system is measured by several sensors. At each operating condition, their fluctuations are described by a covariance matrix
 
 ```math
-X_\theta \approx \mathcal{N}(\mu_\theta,\Sigma_\theta)
+\Sigma(\theta),
 ```
 
-We then measure how rapidly this Gaussian surrogate changes as $\theta$ changes. The covariance contribution to the KL/Fisher curvature is
+where $\theta$ is a physical control parameter such as airspeed, forcing strength, Reynolds number, or fuel mixture.
+
+We measure how quickly this covariance changes as the control parameter changes:
 
 ```math
 \kappa(\theta)
 =
 \frac{1}{2}
-\mathrm{tr}
+\operatorname{tr}
 \left[
 \left(
 \Sigma_\theta^{-1}\Sigma_\theta'
 \right)^2
-\right]
+\right].
 ```
 
-A large value of $\kappa(\theta)$ means that a small change in the control parameter produces a large change in the local covariance structure.
+A large value means that a small change in operating conditions causes a large change in the pattern of fluctuations.
 
-This is different from:
+The key point is that this can happen even when:
 
-- monitoring variance alone;
-- waiting for a large-amplitude response;
-- estimating a Lyapunov exponent from a long recurrent trajectory.
+- total variance changes little;
+- RMS is still small;
+- the largest covariance eigenvalue barely changes;
+- lag-1 autocorrelation gives little warning.
 
-The method uses **parameter sensitivity of the local probability law** as the warning signal.
+## What this adds
 
-## Theory
+The novelty is not simply using KL divergence or Fisher information as an early-warning signal.
 
-For a noisy dominant mode approaching loss of stability, linear theory predicts
+The contribution is to determine **when the full multivariate fluctuation pattern contains information that standard scalar indicators necessarily lose**.
+
+The theory separates two effects:
+
+1. **Amplitude change** — fluctuations get larger.
+2. **Geometry change** — fluctuations rotate or redistribute between different modes.
+
+Variance and RMS mainly see the first. The full covariance method can also see the second.
+
+This matters when instability is caused by several interacting modes rather than one growing mode.
+
+The theory also tells us when the method should **not** help. If one mode dominates the approach to instability, a well-chosen scalar variance can already contain almost all useful information.
+
+## Practical implications
+
+This distinction matters in several central applications.
+
+### Aeroelastic flutter
+
+A wing can become unstable because bending and twisting modes begin to couple.
+
+A covariance-based warning could detect this changing mode geometry before vibration amplitude becomes large.
+
+### Thermoacoustic instability
+
+Dangerous combustor oscillations are created by coupling between pressure waves, heat release, and flow.
+
+The useful warning may therefore be a change in their relationship before pressure RMS becomes large.
+
+### Power grids
+
+An unstable grid oscillation can involve many buses moving together in a particular spatial pattern.
+
+The method can target the emerging multivariate mode instead of waiting for one voltage or frequency signal to become abnormal.
+
+### Ecology
+
+An ecosystem may lose resilience through changing relationships between species even when no single population gives a clear warning.
+
+This gives a way to test whether the important precursor is a collective change rather than a single "sentinel species."
+
+## Why this can improve current early-warning methods
+
+Current methods usually ask:
+
+> "Is variance or autocorrelation increasing?"
+
+This project instead asks:
+
+> **"How much information about the approaching instability is present in the full pattern of fluctuations, and how much is lost when the system is reduced to one number?"**
+
+The practical goals are to:
+
+- detect multivariate instabilities earlier when mode coupling matters;
+- identify which combination of sensors is becoming unstable;
+- determine when simple indicators are already sufficient;
+- design smaller and more informative sensor systems;
+- separate true covariance-geometry precursors from ordinary amplitude growth.
+
+## Nonlinear theory
+
+Near a simple instability, linear theory predicts that covariance sensitivity can grow rapidly as the restoring force weakens.
+
+However, this growth cannot continue indefinitely. Nonlinear effects eventually become important and cut off the linear divergence.
+
+For a cubic critical-mode model, the exact stationary distribution remains very close to its variance-matched Gaussian even through this nonlinear crossover. At the critical limit,
 
 ```math
-\kappa(\theta)\propto(\theta_c-\theta)^{-2}
-```
-
-This growth does **not** continue indefinitely. When nonlinear effects become important, finite noise cuts off the linear divergence and the sensitivity rolls over.
-
-For the cubic critical-mode model, the exact stationary distribution remains uniformly close to its variance-matched Gaussian throughout the nonlinear crossover:
-
-```math
-\sup_\theta
 D_{\mathrm{KL}}
 \left(
-P_\theta
+P
 \Vert
-\mathcal{N}\left(0,\mathrm{Var}(P_\theta)\right)
+\mathcal N(0,\operatorname{Var}(P))
 \right)
-\le 0.031692
+=
+0.031692
+\text{ nats}.
 ```
 
-The bound is in nats. Thus the Gaussian approximation can remain useful even when the linear variance law has already failed.
+This supports using a local Gaussian description well beyond the strictly linear regime.
 
-The project also treats finite-sample effects explicitly. The estimated Jeffreys/KL curvature is corrected for covariance-estimation bias, correlated records are described through an effective sample size, and empirical significance is evaluated with block bootstrap and matched surrogate data.
+## Efficient implementation
 
-## Experiments
+A naive method repeatedly estimates large covariance matrices and computes a KL divergence between them.
 
-The same idea is tested in five different systems.
+That can be noisy.
 
-### Lorenz
+The Fisher-information formulation suggests a more efficient approach: learn the important covariance-change direction during calibration, then monitor a single scalar score that preserves the local information relevant to that direction.
 
-KL covariance sensitivity becomes measurable from a short local segment of the attractor before Rosenstein/Kantz Lyapunov estimators have enough recurrent geometry to stabilize.
+This separates the **information available in the system** from the **statistical cost of estimating it**.
 
-### Rössler
+## Current evidence
 
-The result persists in a single-scroll attractor, showing that it is not a consequence of the two-lobe geometry of Lorenz.
+The project includes tests on:
 
-### Forced Duffing oscillator
+- Lorenz dynamics;
+- Rössler dynamics;
+- forced Duffing dynamics;
+- the circular restricted three-body problem;
+- flexible-wing wind-tunnel data;
+- bearing run-to-failure data;
+- shell-buckling data.
 
-The method detects strong parameter sensitivity within a fraction of one forcing period, while recurrence-based Lyapunov estimation requires many complete periods.
+The flexible-wing experiment currently provides the strongest positive real-data example: covariance structure changes before the large vibration response.
 
-### Annular combustor
+The bearing and shell-buckling experiments are useful negative controls: simple amplitude indicators perform as well as or better than the full covariance method.
 
-Experimental acoustic data show increasing covariance sensitivity as the combustor approaches thermoacoustic instability.
+That is consistent with the theory rather than a contradiction of it.
 
-### Flexible wing
+## Main scientific question
 
-Experimental wind-tunnel data give the clearest causal example.
+The project is ultimately about one question:
 
-Using only measurements available through $26\,\mathrm{m/s}$,
+> **Does loss of stability first appear as amplitude growth, or as a reorganization of fluctuation geometry?**
 
-```math
-K_{24\to26} > K_{20\to24}
-```
+If the answer is "amplitude growth," classical indicators may already be enough.
 
-with block-bootstrap support, while the large-amplitude response appears later at $28\,\mathrm{m/s}$.
-
-The increase is not explained by total variance alone. The full three-channel covariance-sensitivity ratio is
-
-```math
-R_{\mathrm{full}}\approx 2.10
-```
-
-while the total-variance sensitivity ratio is
-
-```math
-R_{\mathrm{var}}\approx 1.28
-```
-
-so their ratio is
-
-```math
-\frac{R_{\mathrm{full}}}{R_{\mathrm{var}}}\approx 1.64
-```
-
-This excess reflects changes in multichannel covariance geometry: anisotropy, correlations, and modal orientation.
-
-The standardized non-Gaussianity of the wing signal changes little between $24$ and $26\,\mathrm{m/s}$, then increases sharply at $28\,\mathrm{m/s}$. The observed sequence is:
-
-1. the distribution remains approximately Gaussian in shape;
-2. covariance sensitivity increases;
-3. a large nonlinear vibration response appears.
-
-## What the project claims
-
-The proposed statistic is **not a chaos detector** and is not a replacement for the Lyapunov exponent.
-
-The central claim is narrower:
-
-> **Parameter sensitivity of local covariance can become detectable before conventional amplitude, variance-only, or recurrence-based instability indicators become informative.**
-
-The Lorenz, Rössler, and Duffing experiments demonstrate the short-record advantage in chaotic benchmark systems. The combustor and wing experiments show the same mechanism in physical data.
-
-## Current validation
-
-The empirical program includes:
-
-- finite-difference robustness checks;
-- Gaussian-approximation diagnostics;
-- block-bootstrap confidence intervals;
-- effective-sample-size corrections for correlated observations;
-- analytic finite-sample bias correction for covariance divergence;
-- matched surrogate nulls;
-- decomposition of covariance sensitivity into overall scale and covariance geometry.
-
-## Why this may matter
-
-Near an instability, a system may become **sensitive before it becomes visibly unstable**.
-
-Estimating that sensitivity can require much less trajectory data than reconstructing long-term dynamical quantities such as Lyapunov exponents. This makes the approach potentially useful when experiments are expensive, operating points are sparse, or only short records are available.
+If the answer is "geometric reorganization," multivariate KL/Fisher methods can reveal information that scalar early-warning signals miss.
 
 ## Status
 
-Research project in active development.
+Active research.
 
-The repository contains theoretical derivations, simulation notebooks, and real-data experiments for Lorenz, Rössler, Duffing, thermoacoustic instability, and flexible-wing flutter.
+The main open empirical goal is to validate this predicted advantage prospectively in additional physical systems where instability is known to involve mode coupling or covariance rotation.
