@@ -15,7 +15,7 @@ This project asks a broader question:
 Suppose a system is measured by several sensors. At each operating condition, their fluctuations are described by a covariance matrix
 
 ```math
-\Sigma(\theta),
+\Sigma(\theta)
 ```
 
 where $\theta$ is a physical control parameter such as airspeed, forcing strength, Reynolds number, or fuel mixture.
@@ -26,12 +26,12 @@ We measure how quickly this covariance changes as the control parameter changes:
 \kappa(\theta)
 =
 \frac{1}{2}
-\operatorname{tr}
+\mathrm{tr}
 \left[
 \left(
 \Sigma_\theta^{-1}\Sigma_\theta'
 \right)^2
-\right].
+\right]
 ```
 
 A large value means that a small change in operating conditions causes a large change in the pattern of fluctuations.
@@ -112,19 +112,15 @@ Near a simple instability, linear theory predicts that covariance sensitivity ca
 
 However, this growth cannot continue indefinitely. Nonlinear effects eventually become important and cut off the linear divergence.
 
-For a cubic critical-mode model, the exact stationary distribution remains very close to its variance-matched Gaussian even through this nonlinear crossover. At the critical limit,
+For a cubic critical-mode model, the exact stationary distribution remains very close to a Gaussian with the same variance, even through this nonlinear crossover. At the critical limit, the KL distance is
 
 ```math
-D_{\mathrm{KL}}
-\left(
-P
-\Vert
-\mathcal N(0,\operatorname{Var}(P))
-\right)
+D_{\mathrm{KL}}(P \Vert G_P)
 =
 0.031692
-\text{ nats}.
 ```
+
+nats, where $G_P$ denotes the Gaussian with the same variance as $P$.
 
 This supports using a local Gaussian description well beyond the strictly linear regime.
 
