@@ -1,169 +1,239 @@
 # Early Signs of Instability
 
-Many systems look normal shortly before they become unstable.
+Many systems approach instability before any single measured signal becomes large.
 
-Examples include an aircraft wing approaching flutter, a combustor approaching violent oscillations, a power grid developing an unstable mode, or an ecosystem approaching a tipping point.
+Examples include an aircraft wing approaching flutter, a combustor approaching thermoacoustic oscillation, a power grid developing an oscillatory mode, or an ecosystem approaching a tipping point.
 
-Most early-warning methods watch one quantity at a time, such as variance, RMS, or lag-1 autocorrelation.
+Most early-warning methods monitor one quantity at a time, such as variance, RMS, or lag-1 autocorrelation.
 
-This project asks a broader question:
+This project asks:
 
-> **Can instability first appear in the relationships between several measurements, before any single measurement looks dangerous?**
+> **Can instability first appear in how several measured variables fluctuate together, before any one variable gives a strong warning?**
 
-## Main idea
+## 1. What is actually measured?
 
-Suppose a system is measured by several sensors. At each operating condition, their fluctuations are described by a covariance matrix
+Fix one operating condition, denoted by $\theta$. For example, $\theta$ could be airspeed.
+
+Assume we have $d$ sensors and record them at $n$ time points while $\theta$ is held approximately constant.
+
+The $i$-th observation is
 
 ```math
-\Sigma(\theta)
+x_i=(x_{i1},x_{i2},\ldots,x_{id})
 ```
 
-where $\theta$ is a physical control parameter such as airspeed, forcing strength, Reynolds number, or fuel mixture.
+where $x_{ij}$ is the value of sensor $j$ at time $i$.
 
-We measure how quickly this covariance changes as the control parameter changes:
+For each sensor $j$, compute its sample mean:
+
+```math
+\mu_j
+=
+\frac{1}{n}
+\sum_{i=1}^{n}x_{ij}
+```
+
+Then compute the sample covariance matrix. Its entry in row $j$, column $k$ is
+
+```math
+\Sigma_{jk}
+=
+\frac{1}{n-1}
+\sum_{i=1}^{n}
+(x_{ij}-\mu_j)
+(x_{ik}-\mu_k)
+```
+
+This matrix has a direct interpretation:
+
+- $\Sigma_{jj}$ is the variance of sensor $j$;
+- $\Sigma_{jk}>0$ means sensors $j$ and $k$ tend to move above and below their means together;
+- $\Sigma_{jk}<0$ means they tend to move in opposite directions;
+- $\Sigma_{jk}\approx0$ means there is little linear co-fluctuation between them.
+
+So $\Sigma$ contains both the variance of each sensor and the pairwise covariances between sensors.
+
+## 2. How is sensitivity to the control parameter computed?
+
+Repeat the covariance calculation at several nearby values of the physical control parameter.
+
+For example, with measurements at $\theta-h$, $\theta$, and $\theta+h$,
+
+```math
+\Sigma'(\theta)
+\approx
+\frac{
+\Sigma(\theta+h)-\Sigma(\theta-h)
+}{
+2h
+}
+```
+
+This estimates how every variance and covariance changes per unit change in $\theta$.
+
+A raw derivative is not enough because sensors can have different units and very different variance levels. We therefore normalize by the current covariance.
+
+If
+
+```math
+\Sigma=Q\Lambda Q^T
+```
+
+where the columns of $Q$ are covariance eigenvectors and the diagonal entries of $\Lambda$ are positive eigenvalues, then
+
+```math
+\Sigma^{-1/2}
+=
+Q\Lambda^{-1/2}Q^T
+```
+
+rescales each principal fluctuation direction by its current standard deviation.
+
+Define
+
+```math
+A(\theta)
+=
+\Sigma(\theta)^{-1/2}
+\Sigma'(\theta)
+\Sigma(\theta)^{-1/2}
+```
+
+and then
 
 ```math
 \kappa(\theta)
 =
 \frac{1}{2}
-\mathrm{tr}
-\left[
-\left(
-\Sigma_\theta^{-1}\Sigma_\theta'
-\right)^2
-\right]
+\sum_{j,k}A_{jk}(\theta)^2
 ```
 
-A large value means that a small change in operating conditions causes a large change in the pattern of fluctuations.
+This is the covariance contribution to Fisher information.
 
-The key point is that this can happen even when:
+For nearby parameter values, the Gaussian KL divergence satisfies
 
-- total variance changes little;
-- RMS is still small;
-- the largest covariance eigenvalue barely changes;
-- lag-1 autocorrelation gives little warning.
+```math
+D_{\mathrm{KL}}
+\bigl(
+P_\theta
+\Vert
+P_{\theta+\Delta\theta}
+\bigr)
+=
+\frac{1}{2}
+\kappa(\theta)
+(\Delta\theta)^2
++
+o\bigl((\Delta\theta)^2\bigr)
+```
 
-## What this adds
+when only the covariance contribution is considered.
 
-The novelty is not simply using KL divergence or Fisher information as an early-warning signal.
+So a large $\kappa$ has a precise meaning:
 
-The contribution is to determine **when the full multivariate fluctuation pattern contains information that standard scalar indicators necessarily lose**.
+> **a small change in the physical control parameter produces a large relative change in the measured variances and cross-covariances.**
 
-The theory separates two effects:
+## 3. What can this detect that variance alone cannot?
 
-1. **Amplitude change** — fluctuations get larger.
-2. **Geometry change** — fluctuations rotate or redistribute between different modes.
+Variance of one signal measures only how much that signal spreads around its mean.
 
-Variance and RMS mainly see the first. The full covariance method can also see the second.
+The full covariance matrix also records how different sensors move together.
 
-This matters when instability is caused by several interacting modes rather than one growing mode.
+This matters when instability involves more than one interacting mode.
 
-The theory also tells us when the method should **not** help. If one mode dominates the approach to instability, a well-chosen scalar variance can already contain almost all useful information.
+For example, an aircraft wing can approach flutter because bending and twisting motions become increasingly coupled. The RMS of each sensor may still be moderate while the covariance between bending and torsion measurements changes strongly.
 
-## Practical implications
+The method is intended for this case.
 
-This distinction matters in several central applications.
+It is not expected to improve on a scalar variance indicator when one single mode dominates the approach to instability.
+
+More precisely, if the normalized covariance-change matrix $A$ has one eigenvalue much larger in magnitude than all the others, one sensor combination contains almost all covariance information. If several eigenvalues of $A$ have comparable magnitude, more than one independent sensor combination is changing and a scalar variance necessarily loses part of that information.
+
+## 4. Why this can improve current early-warning methods
+
+Standard early-warning methods usually ask:
+
+> Is variance increasing?
+
+or:
+
+> Is lag-1 autocorrelation increasing?
+
+This project asks a different question:
+
+> **How much information about the approaching instability is present in all measured variances and covariances, and how much is lost when they are reduced to one scalar indicator?**
+
+The practical improvement is conditional rather than universal:
+
+- if one mode dominates, a simple scalar warning can already be sufficient;
+- if several modes reorganize together, the multivariate covariance can contain warning information that no single variance can retain.
+
+## 5. Where this matters
 
 ### Aeroelastic flutter
 
-A wing can become unstable because bending and twisting modes begin to couple.
+Flutter can result from coupling between bending and twisting modes.
 
-A covariance-based warning could detect this changing mode geometry before vibration amplitude becomes large.
+The method tests whether covariances between strain and acceleration channels change before vibration amplitude becomes large.
 
 ### Thermoacoustic instability
 
-Dangerous combustor oscillations are created by coupling between pressure waves, heat release, and flow.
+Combustion instability is driven by interaction between pressure, heat release, and flow.
 
-The useful warning may therefore be a change in their relationship before pressure RMS becomes large.
+The method tests whether their cross-covariances change before pressure RMS gives a strong warning.
 
 ### Power grids
 
-An unstable grid oscillation can involve many buses moving together in a particular spatial pattern.
+An oscillatory grid instability can involve coordinated motion across many buses.
 
-The method can target the emerging multivariate mode instead of waiting for one voltage or frequency signal to become abnormal.
+The method uses voltage, phase, and frequency measurements jointly instead of waiting for one bus to become abnormal.
 
 ### Ecology
 
-An ecosystem may lose resilience through changing relationships between species even when no single population gives a clear warning.
+An ecosystem may lose resilience through changing relationships between species.
 
-This gives a way to test whether the important precursor is a collective change rather than a single "sentinel species."
+The method tests whether cross-species covariances change before any single population shows a strong warning.
 
-## Why this can improve current early-warning methods
+## 6. Why use a Gaussian approximation?
 
-Current methods usually ask:
+At each operating point, the method replaces the observed sensor distribution by a Gaussian with the same mean and covariance.
 
-> "Is variance or autocorrelation increasing?"
+This is an approximation, not an assumption that the real system is exactly Gaussian.
 
-This project instead asks:
-
-> **"How much information about the approaching instability is present in the full pattern of fluctuations, and how much is lost when the system is reduced to one number?"**
-
-The practical goals are to:
-
-- detect multivariate instabilities earlier when mode coupling matters;
-- identify which combination of sensors is becoming unstable;
-- determine when simple indicators are already sufficient;
-- design smaller and more informative sensor systems;
-- separate true covariance-geometry precursors from ordinary amplitude growth.
-
-## Nonlinear theory
-
-Near a simple instability, linear theory predicts that covariance sensitivity can grow rapidly as the restoring force weakens.
-
-However, this growth cannot continue indefinitely. Nonlinear effects eventually become important and cut off the linear divergence.
-
-For a cubic critical-mode model, the exact stationary distribution remains very close to a Gaussian with the same variance, even through this nonlinear crossover. At the critical limit, the KL distance is
+For the cubic critical-mode model studied in this project, the exact stationary distribution remains close to the Gaussian with the same variance even when nonlinear effects become important. At the critical limit,
 
 ```math
-D_{\mathrm{KL}}(P \Vert G_P)
+D_{\mathrm{KL}}(P\Vert G_P)
 =
 0.031692
 ```
 
-nats, where $G_P$ denotes the Gaussian with the same variance as $P$.
+nats, where $G_P$ is the Gaussian with the same variance as $P$.
 
-This supports using a local Gaussian description well beyond the strictly linear regime.
+This gives a quantitative error scale for that model rather than simply assuming Gaussianity.
 
-## Efficient implementation
+## 7. Current evidence
 
-A naive method repeatedly estimates large covariance matrices and computes a KL divergence between them.
+The project includes Lorenz, Rössler, forced Duffing dynamics, the circular restricted three-body problem, flexible-wing wind-tunnel data, bearing run-to-failure data, and shell-buckling data.
 
-That can be noisy.
+The strongest positive real-data result so far is the flexible-wing experiment. Before the large response at $28\,\mathrm{m/s}$, the full three-channel covariance-sensitivity increase from the previous parameter interval is about $2.10\times$, while the corresponding total-variance sensitivity increase is about $1.28\times$.
 
-The Fisher-information formulation suggests a more efficient approach: learn the important covariance-change direction during calibration, then monitor a single scalar score that preserves the local information relevant to that direction.
+The bearing experiment gives the opposite result: RMS provides an earlier and more robust warning than the full covariance KL statistic.
 
-This separates the **information available in the system** from the **statistical cost of estimating it**.
+The shell-buckling experiment also does not produce a validated covariance precursor.
 
-## Current evidence
-
-The project includes tests on:
-
-- Lorenz dynamics;
-- Rössler dynamics;
-- forced Duffing dynamics;
-- the circular restricted three-body problem;
-- flexible-wing wind-tunnel data;
-- bearing run-to-failure data;
-- shell-buckling data.
-
-The flexible-wing experiment currently provides the strongest positive real-data example: covariance structure changes before the large vibration response.
-
-The bearing and shell-buckling experiments are useful negative controls: simple amplitude indicators perform as well as or better than the full covariance method.
-
-That is consistent with the theory rather than a contradiction of it.
+These negative results are part of the test: the method should only outperform scalar indicators when genuinely multivariate precursor information is present.
 
 ## Main scientific question
 
-The project is ultimately about one question:
+> **Does loss of stability first appear as larger fluctuations, or as a change in how different measured variables fluctuate together?**
 
-> **Does loss of stability first appear as amplitude growth, or as a reorganization of fluctuation geometry?**
+If it is mainly larger fluctuations, standard scalar indicators may already be sufficient.
 
-If the answer is "amplitude growth," classical indicators may already be enough.
-
-If the answer is "geometric reorganization," multivariate KL/Fisher methods can reveal information that scalar early-warning signals miss.
+If the relationships between variables change first, multivariate covariance sensitivity can reveal information that scalar early-warning signals cannot contain.
 
 ## Status
 
 Active research.
 
-The main open empirical goal is to validate this predicted advantage prospectively in additional physical systems where instability is known to involve mode coupling or covariance rotation.
+The main empirical goal is prospective validation in physical systems where the mechanism of instability is known in advance to involve coupling between several modes or measured variables.
